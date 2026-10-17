@@ -31,28 +31,17 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Generate Package Lock & Install
-        run: |
-          npm i --package-lock-only
-          npm ci || npm install
+      - name: Install Dependencies
+        run: npm ci || npm install
 
-      - name: Initialize Capacitor Config
+      - name: Build Android Native Platform & Sync Assets
         env:
           DEBUG: "*"
           CAPACITOR_DEBUG: "1"
         run: |
-          npx cap init "LlamaApp" "com.pdvargasvega.llama" --web-dir "www"
-
-      - name: Add Android Platform & Sync Assets
-        env:
-          DEBUG: "*"
-          CAPACITOR_DEBUG: "1"
-        run: |
-          rm -rf android
-          npx cap add android
+          npx cap add android || true
           mkdir -p android/app/src/main/assets/public
           cp -r www/* android/app/src/main/assets/public/
-          npx cap copy android
           npx cap sync android
 
       - name: Setup Gradle
