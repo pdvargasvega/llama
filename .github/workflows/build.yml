@@ -27,11 +27,22 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Initialize Capacitor & Add Android
+      - name: Create Capacitor Config
         run: |
-          npx cap init "LlamaApp" "com.pdvargasvega.llama" --web-dir "www"
-          npx @capacitor/cli add android
-          npx @capacitor/cli sync android
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "com.pdvargasvega.llama",
+            "appName": "LlamaApp",
+            "webDir": "www",
+            "bundledWebRuntime": false
+          }
+          EOF
+
+      - name: Add Android & Sync
+        run: |
+          npx cap add android
+          npx cap copy android
+          npx cap sync android
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -49,4 +60,8 @@ jobs:
           name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-      
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
