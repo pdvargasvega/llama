@@ -31,9 +31,9 @@ jobs:
         run: |
           npx cap init "LlamaApp" "com.pdvargasvega.llama" --web-dir "www"
 
-      - name: Add Android Platform
+      - name: Add Android Platform (Without Copy)
         run: |
-          npx cap add android
+          npx cap add android --no-copy
 
       - name: Inject WWW Files Into Android Project
         run: |
