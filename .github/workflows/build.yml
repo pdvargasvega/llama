@@ -24,33 +24,40 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install Cordova
-        run: npm install -g cordova
+      - name: Install Dependencies
+        run: npm install
 
-      - name: Create Cordova Project
+      - name: Initialize Capacitor Config
         run: |
-          cordova create myapp com.pdvargasvega.llama LlamaApp
-          cp -r www/* myapp/www/
-          cd myapp
-          cordova platform add android
+          npx cap init "LlamaApp" "com.pdvargasvega.llama" --web-dir "www"
+
+      - name: Add Android Platform
+        run: |
+          npx cap add android
+
+      - name: Copy Web Files to Android
+        run: |
+          mkdir -p android/app/src/main/assets/public
+          cp -r www/* android/app/src/main/assets/public/
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build APK & AAB Files
         run: |
-          cd myapp
-          cordova build android --debug
-          cordova build android --release -- --packageType=bundle
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          ./gradlew bundleRelease
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: myapp/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
-          path: myapp/platforms/android/app/build/outputs/bundle/release/app-release.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
