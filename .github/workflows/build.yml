@@ -29,17 +29,15 @@ jobs:
 
       - name: Create Capacitor Config
         run: |
-          cat << 'EOF' > capacitor.config.json
-          {
-            "appId": "com.pdvargasvega.llama",
-            "appName": "LlamaApp",
-            "webDir": "www"
-          }
-          EOF
+          npx cap init "LlamaApp" "com.pdvargasvega.llama" --web-dir "www"
 
-      - name: Add Android & Sync
+      - name: Add Android Platform
         run: |
           npx cap add android
+
+      - name: Sync Web Assets to Android
+        run: |
+          npx cap copy android
           npx cap sync android
 
       - name: Setup Gradle
