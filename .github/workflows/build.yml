@@ -16,10 +16,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
       - name: Setup Java JDK
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -27,18 +27,19 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Initialize Capacitor & Add Android Platform
+      - name: Initialize Capacitor & Add Android
         run: |
-          npx cap init "My HTML App" "com.example.myhtmlapp" --web-dir "www"
-          npx cap add android
-          npx cap sync android
+          npx cap init "LlamaApp" "com.pdvargasvega.llama" --web-dir "www"
+          npx @capacitor/cli add android
+          npx @capacitor/cli sync android
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build APK & AAB Files
         run: |
           cd android
+          chmod +x gradlew
           ./gradlew assembleDebug
           ./gradlew bundleRelease
 
@@ -48,8 +49,4 @@ jobs:
           name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload AAB Artifact (For Play Store)
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
+      
