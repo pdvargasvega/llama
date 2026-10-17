@@ -27,12 +27,14 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Build Web App & Capacitor Sync
+      - name: Setup Capacitor & Clean Old Platform
         run: |
           npx cap init "LlamaApp" "com.pdvargasvega.llama" --web-dir "www"
-          mkdir -p android/app/src/main/assets/public
-          cp -r www/* android/app/src/main/assets/public/ || true
-          npx cap add android || true
+          rm -rf android
+
+      - name: Add Android & Sync
+        run: |
+          npx cap add android
           npx cap sync android
 
       - name: Setup Gradle
