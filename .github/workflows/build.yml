@@ -33,15 +33,13 @@ jobs:
           {
             "appId": "com.pdvargasvega.llama",
             "appName": "LlamaApp",
-            "webDir": "www",
-            "bundledWebRuntime": false
+            "webDir": "www"
           }
           EOF
 
       - name: Add Android & Sync
         run: |
           npx cap add android
-          npx cap copy android
           npx cap sync android
 
       - name: Setup Gradle
