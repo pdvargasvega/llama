@@ -41,16 +41,17 @@ jobs:
         run: |
           npx cap init "LlamaApp" "com.pdvargasvega.llama" --web-dir "www"
 
-      - name: Pre-populate Android Assets & Add Platform
+      - name: Add Android Platform & Copy Assets
         env:
           DEBUG: "*"
           CAPACITOR_DEBUG: "1"
         run: |
-          mkdir -p android/app/src/main/assets/public
-          mkdir -p android/www
-          cp -r www/* android/app/src/main/assets/public/
-          cp -r www/* android/www/
+          rm -rf android
           npx cap add android
+          mkdir -p android/www
+          cp -r www/* android/www/
+          mkdir -p android/app/src/main/assets/public
+          cp -r www/* android/app/src/main/assets/public/
           npx cap sync android
 
       - name: Setup Gradle
