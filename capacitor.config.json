@@ -1,0 +1,6 @@
+{
+  "appId": "com.pdvargasvega.llama",
+  "appName": "LlamaApp",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
