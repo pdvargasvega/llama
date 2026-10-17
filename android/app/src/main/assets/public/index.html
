@@ -1,0 +1,1722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Aventura de la Llama - Games by Pablo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; background-color: #000; overflow: hidden; font-family: 'Press Start 2P', 'Courier New', monospace; }
+        canvas { display: block; margin: 0 auto; width: 100vw; height: 100vh; object-fit: contain; image-rendering: pixelated; }
+        #startScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #1a1a1a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        #startScreen h1 { color: #FFD700; text-shadow: 4px 4px 0px #8B0000; text-align: center; line-height: 1.5; font-size: 32px; margin-bottom: 10px; }
+        #startScreen p { color: #32CD32; font-size: 16px; margin-bottom: 40px; }
+        #startScreen button { background-color: #4CAF50; color: white; border: 4px solid white; padding: 15px 30px; margin: 15px; font-family: 'Press Start 2P', monospace; font-size: 16px; cursor: pointer; text-transform: uppercase; }
+        #startScreen button:hover { background-color: #FFD700; color: black; }
+        #ui { position: absolute; top: 20px; left: 20px; font-size: 14px; color: white; text-shadow: 2px 2px 0px black; line-height: 1.5; z-index: 10; display: none; }
+        #controles { position: absolute; top: 20px; right: 20px; font-size: 10px; color: white; text-shadow: 1px 1px 0px black; text-align: right; line-height: 1.5; z-index: 10; display: none; }
+        #mensaje { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; color: white; text-shadow: 2px 2px 0px black; display: none; text-align: center; line-height: 1.8; background: rgba(0, 0, 0, 0.8); padding: 20px; border: 4px solid white; z-index: 20; }
+    
+        /* Estilos Controles Móviles */
+        #mobileControls { display: none; position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+        .dpad, .action-btns, .sys-btns { pointer-events: auto; position: absolute; }
+        .dpad { bottom: 20px; left: 20px; display: grid; grid-template-columns: 60px 60px 60px; grid-template-rows: 60px 60px; gap: 10px; }
+        .action-btns { bottom: 20px; right: 20px; display: flex; gap: 15px; align-items: flex-end; }
+        .sys-btns { top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+        .touch-btn { background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 10px; color: white; font-family: 'Press Start 2P', monospace; display: flex; justify-content: center; align-items: center; user-select: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; text-shadow: 2px 2px 0px #000; }
+        .touch-btn:active { background: rgba(255, 255, 255, 0.6); }
+    </style>
+</head>
+<body>
+
+    <div id="mobileControls">
+        <div class="sys-btns">
+            <div class="touch-btn" id="btnEsc" style="width: 50px; height: 35px; font-size: 8px;">ESC</div>
+            <div class="touch-btn" id="btnEnter" style="width: 60px; height: 35px; font-size: 8px;">START</div>
+        </div>
+        <div class="dpad">
+            <div style="grid-column: 2; grid-row: 1;"></div>
+            <div class="touch-btn" id="btnLeft" style="grid-column: 1; grid-row: 2; font-size: 20px;">◄</div>
+            <div class="touch-btn" id="btnDown" style="grid-column: 2; grid-row: 2; font-size: 20px;">▼</div>
+            <div class="touch-btn" id="btnRight" style="grid-column: 3; grid-row: 2; font-size: 20px;">►</div>
+        </div>
+        <div class="action-btns">
+            <div class="touch-btn" id="btnShoot" style="width: 60px; height: 60px; font-size: 8px; border-radius: 50%;">ATACAR</div>
+            <div class="touch-btn" id="btnUp" style="width: 70px; height: 70px; border-radius: 50%; font-size: 24px;">▲</div>
+        </div>
+    </div>
+
+    <div id="startScreen">
+        <h1>Aventura de la Llama</h1>
+        <p>GAMES BY PABLO</p>
+        <button id="btn1P">1 JUGADOR</button>
+        <button id="btn2P">2 JUGADORES</button>
+        <button id="btnLoadStart" style="background-color: #20B2AA;">CARGAR PARTIDA</button>
+    </div>
+    <div id="ui">
+        MUNDO: <span id="mundoUI">1</span>-<span id="nivelUI">1</span><br>
+        CACAOS: <span id="score">0</span><br>
+        <span id="vidasLabel">VIDAS:</span> <span id="vidas">5</span><br>
+        TIEMPO: <span id="tiempoUI">---</span><br>
+        <span id="efecto" style="color:#FFD700;"></span>
+    </div>
+    <div id="controles"></div>
+    <div id="mensaje"></div>
+    <button id="btnSaveGame" style="position: absolute; bottom: 20px; right: 20px; background-color: #FF8C00; color: white; border: 4px solid white; padding: 10px; font-family: 'Press Start 2P', monospace; font-size: 12px; cursor: pointer; z-index: 10; display: none;">GUARDAR JUEGO</button>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+<script>
+
+    // --- CONTROLES MÓVILES ---
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        document.getElementById('mobileControls').style.display = 'block';
+    }
+
+    function simularTeclaPulsada(code) {
+        let e = {code: code};
+        if (e.code === 'KeyM') {
+            musicMuted = !musicMuted;
+            if (musicMuted) stopMusic();
+            else if (gameStarted) startMusic();
+        }
+        if (e.code === 'Escape' && gameStarted) { if(!inMapMode) { inMapMode = true; return; } else { volverAlMenu(); return; } }
+        if (gameStarted && (gameOver || gameWon) && e.code === 'Enter') {
+            if (gameWon) volverAlMenu();
+            else {
+                gameOver = false; gameWon = false; score = 0; vidas = 5;
+                players = []; 
+                scoreElement.innerText = score; vidasElement.innerText = vidas;
+                mensajeElement.style.display = 'none'; cargarNivel(mundoActual, nivelActual);
+            }
+        }
+    }
+
+    function bindTouch(id, code) {
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.addEventListener('touchstart', (e) => { 
+            e.preventDefault(); // Evita zoom o scroll
+            keys[code] = true; 
+            simularTeclaPulsada(code); 
+        }, {passive: false});
+        el.addEventListener('touchend', (e) => { 
+            e.preventDefault(); 
+            keys[code] = false; 
+        }, {passive: false});
+        el.addEventListener('touchcancel', (e) => { 
+            e.preventDefault(); 
+            keys[code] = false; 
+        }, {passive: false});
+    }
+
+    bindTouch('btnLeft', 'ArrowLeft');
+    bindTouch('btnRight', 'ArrowRight');
+    bindTouch('btnUp', 'ArrowUp');
+    bindTouch('btnDown', 'ArrowDown');
+    bindTouch('btnShoot', 'Space');
+    bindTouch('btnEnter', 'Enter');
+    bindTouch('btnEsc', 'Escape');
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const mundoElement = document.getElementById('mundoUI');
+    const nivelElement = document.getElementById('nivelUI');
+    const vidasElement = document.getElementById('vidas');
+    const vidasLabelElement = document.getElementById('vidasLabel');
+    const efectoElement = document.getElementById('efecto');
+    const tiempoElement = document.getElementById('tiempoUI');
+    const mensajeElement = document.getElementById('mensaje');
+    const controlesElement = document.getElementById('controles');
+
+    ctx.imageSmoothingEnabled = false;
+
+    let gameStarted = false, gameOver = false, gameWon = false;
+    let score = 0, vidas = 5, cameraX = 0;
+    let mundoActual = 1, nivelActual = 1;
+    let respawnX = 50, respawnY = 310;
+    let bolas = [], players = [], numPlayers = 1;
+    let levelLength = 0; 
+    const ground = 350;
+
+    let currentCacaos = [], currentTrasquiladores = [], currentPowerups = [], currentBloques = [];
+    let currentHuecos = [], currentCheckpoints = [], currentPipes = [], currentResortes = [], currentPlataformas = [], currentMonos = [], currentPlantas = [], currentHierbas = [];
+    let subRoom = { active: false, cacaos: [], pipes: [] };
+    let isBonus = false, bonusTimer = 0, fallingCacaos = [];
+    let nivelTimer = 0;
+    let portal = null, jefe = null, isUnderworld = false, skyColor = '#87CEEB';
+        let inMapMode = false;
+    let inCutscene = false;
+    let cutsceneTimer = 0;
+    let cutsceneStep = 0;
+    const cutsceneTexts = [
+        "EN LO ALTO DE LOS ANDES PERUANOS...",
+        "LA LLAMA VIVIA FELIZ CON SU CACAO DORADO.",
+        "¡PERO EL REY TRASQUILADOR SE LO ROBO!",
+        "AHORA VIAJARA POR EL PERU PARA RECUPERARLO..."
+    ];
+    let maxUnlockedIndex = 0;
+    let mapCurrentIndex = 0;
+    let mapMoveTimer = 0;
+    let mapCameraX = 0;
+    let mapNodes = [];
+    for (let m = 1; m <= 8; m++) {
+        let offsetX = (m - 1) * 600;
+        mapNodes.push({ mundo: m, nivel: 1, x: offsetX + 100, y: 250 });
+        mapNodes.push({ mundo: m, nivel: 2, x: offsetX + 200, y: 150 });
+        mapNodes.push({ mundo: m, nivel: 'Bonus', x: offsetX + 250, y: 80 });
+        mapNodes.push({ mundo: m, nivel: 3, x: offsetX + 300, y: 100 });
+        mapNodes.push({ mundo: m, nivel: 4, x: offsetX + 400, y: 200 });
+        mapNodes.push({ mundo: m, nivel: 5, x: offsetX + 500, y: 250 }); // Jefe
+    }
+
+    const biomes = [
+        { bg: '#228B22', p: '#8FBC8F', desc: 'PRADERA VERDE' },
+        { bg: '#F4A460', p: '#D2B48C', desc: 'DESIERTO ARIDO' },
+        { bg: '#4B0082', p: '#483D8B', desc: 'CUEVAS OSCURAS' },
+        { bg: '#E0FFFF', p: '#B0E0E6', desc: 'CUMBRES NEVADAS' },
+        { bg: '#20B2AA', p: '#48D1CC', desc: 'ARCHIPIELAGO' },
+        { bg: '#BDB76B', p: '#DAA520', desc: 'MONTANAS ROCOSAS' },
+        { bg: '#87CEEB', p: '#B0C4DE', desc: 'EL CIELO' },
+        { bg: '#8B0000', p: '#B22222', desc: 'VOLCAN INFERNAL' }
+    ];
+
+    const coloresCielo = ['#87CEEB', '#FF7F50', '#00008B', '#FFB6C1', '#20B2AA', '#FF8C00', '#800080', '#8B0000'];
+
+    // SISTEMA DE AUDIO
+    let audioCtx;
+    let isPlayingMusic = false;
+    let musicTimeout;
+    let musicMuted = false;
+
+    function startMusic() {
+        if (musicMuted) return;
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (isPlayingMusic) return;
+        isPlayingMusic = true;
+
+        const melody = [
+            {f: 466.16, d: 1}, {f: 440.0, d: 0.5}, {f: 466.16, d: 0.5}, {f: 392.0, d: 1},
+            {f: 466.16, d: 1}, {f: 440.0, d: 0.5}, {f: 466.16, d: 0.5}, {f: 392.0, d: 1},
+            {f: 466.16, d: 1}, {f: 440.0, d: 0.5}, {f: 466.16, d: 0.5}, {f: 392.0, d: 1},
+            {f: 466.16, d: 1}, {f: 440.0, d: 0.5}, {f: 466.16, d: 0.5}, {f: 392.0, d: 1},
+            {f: 587.33, d: 1}, {f: 523.25, d: 0.5}, {f: 587.33, d: 0.5}, {f: 466.16, d: 1},
+            {f: 587.33, d: 1}, {f: 523.25, d: 0.5}, {f: 587.33, d: 0.5}, {f: 466.16, d: 1},
+            {f: 523.25, d: 1}, {f: 466.16, d: 0.5}, {f: 523.25, d: 0.5}, {f: 440.0, d: 1},
+            {f: 523.25, d: 1}, {f: 466.16, d: 0.5}, {f: 523.25, d: 0.5}, {f: 440.0, d: 1}
+        ];
+        const bass = [196.0, 196.0, 196.0, 196.0, 196.0, 174.61, 155.56, 146.83];
+        
+        let noteIndex = 0;
+        let nextNoteTime = audioCtx.currentTime + 0.1;
+        const beatLength = 0.45;
+
+        function scheduleNotes() {
+            if (!isPlayingMusic) return;
+            while (nextNoteTime < audioCtx.currentTime + 0.1) {
+                let note = melody[noteIndex];
+                playTone(note.f, nextNoteTime, note.d * beatLength, 0.05, 'square');
+                if (noteIndex % 4 === 0) {
+                    let bFreq = bass[Math.floor(noteIndex / 4)];
+                    playTone(bFreq, nextNoteTime, 3 * beatLength, 0.08, 'triangle');
+                }
+                nextNoteTime += note.d * beatLength;
+                noteIndex = (noteIndex + 1) % melody.length;
+            }
+            musicTimeout = setTimeout(scheduleNotes, 25);
+        }
+        scheduleNotes();
+    }
+
+    function playTone(freq, time, duration, vol, type) {
+        if (!freq || !audioCtx) return;
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(vol, time + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration - 0.02);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(time); osc.stop(time + duration);
+    }
+
+    function stopMusic() { isPlayingMusic = false; clearTimeout(musicTimeout); }
+
+    function playSound(type) {
+        if (musicMuted || !audioCtx) return;
+        let time = audioCtx.currentTime;
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+
+        if (type === 'jump') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(300, time);
+            osc.frequency.exponentialRampToValueAtTime(600, time + 0.15);
+            gain.gain.setValueAtTime(0.1, time); gain.gain.linearRampToValueAtTime(0, time + 0.15);
+            osc.start(time); osc.stop(time + 0.15);
+        } else if (type === 'shoot') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(600, time);
+            osc.frequency.exponentialRampToValueAtTime(100, time + 0.1);
+            gain.gain.setValueAtTime(0.05, time); gain.gain.linearRampToValueAtTime(0, time + 0.1);
+            osc.start(time); osc.stop(time + 0.1);
+        } else if (type === 'collect') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(987.77, time);
+            gain.gain.setValueAtTime(0.05, time); gain.gain.setValueAtTime(0, time + 0.05);
+            osc.start(time); osc.stop(time + 0.05);
+            
+            let osc2 = audioCtx.createOscillator(); let gain2 = audioCtx.createGain();
+            osc2.type = 'square'; osc2.frequency.setValueAtTime(1318.51, time + 0.05);
+            gain2.gain.setValueAtTime(0.05, time + 0.05); gain2.gain.linearRampToValueAtTime(0, time + 0.15);
+            osc2.connect(gain2); gain2.connect(audioCtx.destination);
+            osc2.start(time + 0.05); osc2.stop(time + 0.15);
+        } else if (type === 'enemyDie') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, time);
+            osc.frequency.exponentialRampToValueAtTime(50, time + 0.2);
+            gain.gain.setValueAtTime(0.1, time); gain.gain.linearRampToValueAtTime(0, time + 0.2);
+            osc.start(time); osc.stop(time + 0.2);
+        } else if (type === 'hurt') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, time);
+            osc.frequency.exponentialRampToValueAtTime(50, time + 0.3);
+            gain.gain.setValueAtTime(0.1, time); gain.gain.linearRampToValueAtTime(0, time + 0.3);
+            osc.start(time); osc.stop(time + 0.3);
+        }
+    }
+
+    document.getElementById('btn1P').addEventListener('click', () => iniciarJuego(1));
+    document.getElementById('btn2P').addEventListener('click', () => iniciarJuego(2));
+
+    document.getElementById('btnLoadStart').addEventListener('click', cargarJuego);
+    document.getElementById('btnSaveGame').addEventListener('click', guardarJuego);
+
+    function guardarJuego() {
+        const saveData = { maxUnlockedIndex, score, vidas, numPlayers };
+        localStorage.setItem('aventuraLlamaSave', JSON.stringify(saveData));
+        
+        mensajeElement.innerHTML = "¡PARTIDA GUARDADA!";
+        mensajeElement.style.color = "#FFD700";
+        mensajeElement.style.display = 'block';
+        setTimeout(() => {
+            if (mensajeElement.innerHTML === "¡PARTIDA GUARDADA!") {
+                mensajeElement.style.display = 'none';
+            }
+        }, 1500);
+        window.focus(); // Devolver el foco al canvas para que no se peguen las teclas
+    }
+
+    function cargarJuego() {
+        const saved = localStorage.getItem('aventuraLlamaSave');
+        if (saved) {
+            const saveData = JSON.parse(saved);
+            maxUnlockedIndex = saveData.maxUnlockedIndex;
+            score = saveData.score;
+            vidas = saveData.vidas;
+            numPlayers = saveData.numPlayers || 1;
+            
+            scoreElement.innerText = score; 
+            vidasElement.innerText = vidas;
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            controlesElement.style.display = 'block';
+            document.getElementById('btnSaveGame').style.display = 'block';
+            
+            if (numPlayers === 1) {
+                vidasLabelElement.innerText = "VIDAS:";
+                controlesElement.innerHTML = "<b>JUGADOR 1 (Llama)</b><br>Mover: Flechas<br>Tuberia: ABAJO<br>Disparar: ESPACIO<br><br><span style='color:#FFD700;'>M: Mutear | ESC: Menú</span>";
+            } else {
+                vidasLabelElement.innerText = "VIDAS COMPARTIDAS:";
+                controlesElement.innerHTML = "<b>JUGADOR 1 (Llama)</b><br>Mover: Flechas<br>Tuberia: ABAJO<br>Disparar: ESPACIO<br><br><b>JUGADOR 2 (Stickman)</b><br>Mover: W,A,D<br>Tuberia: S<br>Disparar: F<br><br><span style='color:#FFD700;'>M: Mutear | ESC: Menú</span>";
+            }
+            
+            gameStarted = true;
+            inCutscene = false; // Al cargar partida nos saltamos la intro
+            inMapMode = true;
+            mapCurrentIndex = maxUnlockedIndex;
+            startMusic();
+        } else {
+            alert("No hay ninguna partida guardada.");
+        }
+    }
+
+
+    function iniciarJuego(num) {
+        numPlayers = num;
+        document.getElementById('startScreen').style.display = 'none';
+        document.getElementById('ui').style.display = 'block';
+        controlesElement.style.display = 'block';
+
+        if (num === 1) {
+            vidasLabelElement.innerText = "VIDAS:";
+            controlesElement.innerHTML = "<b>JUGADOR 1 (Llama)</b><br>Mover: Flechas<br>Tuberia: ABAJO<br>Disparar: ESPACIO<br><br><span style='color:#FFD700;'>M: Mutear | ESC: Menú</span>";
+        } else {
+            vidasLabelElement.innerText = "VIDAS COMPARTIDAS:";
+            controlesElement.innerHTML = "<b>JUGADOR 1 (Llama)</b><br>Mover: Flechas<br>Tuberia: ABAJO<br>Disparar: ESPACIO<br><br><b>JUGADOR 2 (Stickman)</b><br>Mover: W,A,D<br>Tuberia: S<br>Disparar: F<br><br><span style='color:#FFD700;'>M: Mutear | ESC: Menú</span>";
+        }
+
+        score = 0; vidas = 5;
+        scoreElement.innerText = score; vidasElement.innerText = vidas;
+        document.getElementById('btnSaveGame').style.display = 'block';
+        gameStarted = true;
+        inCutscene = true;
+        cutsceneTimer = 0;
+        cutsceneStep = 0;
+        startMusic(); 
+    }
+
+    function volverAlMenu() {
+        gameStarted = false; gameOver = false; gameWon = false; inMapMode = false;
+        stopMusic();
+        document.getElementById('startScreen').style.display = 'flex';
+        document.getElementById('ui').style.display = 'none';
+        controlesElement.style.display = 'none';
+        document.getElementById('btnSaveGame').style.display = 'none';
+        mensajeElement.style.display = 'none';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        players = []; // Reset players array on return to menu
+    }
+
+    function initPlayers() {
+        if (players.length === 0) {
+            players.push({ id: 1, x: respawnX, y: respawnY, width: 40, height: 40, vx: 0, vy: 0, speed: 5, jumpPowerNormal: -12, jumpPowerSuper: -16, grounded: false, facingRight: true, sprite: 'llama', keys: {left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown', shoot: 'Space'}, invincibilityTimer: 0, superJumpTimer: 0, speedBoostTimer: 0, magnetTimer: 0, hasWoolPower: false, shootCooldown: 0, flashHitTimer: 0 });
+            if (numPlayers === 2) {
+                players.push({ id: 2, x: respawnX + 50, y: respawnY, width: 40, height: 40, vx: 0, vy: 0, speed: 5, jumpPowerNormal: -12, jumpPowerSuper: -16, grounded: false, facingRight: true, sprite: 'stickman', keys: {left: 'KeyA', right: 'KeyD', up: 'KeyW', down: 'KeyS', shoot: 'KeyF'}, invincibilityTimer: 0, superJumpTimer: 0, speedBoostTimer: 0, magnetTimer: 0, hasWoolPower: false, shootCooldown: 0, flashHitTimer: 0 });
+            }
+        } else {
+            players.forEach((p, index) => {
+                p.x = respawnX + (index * 50);
+                p.y = respawnY;
+                p.vx = 0;
+                p.vy = 0;
+                p.grounded = false;
+                p.shootCooldown = 0;
+                p.flashHitTimer = 0;
+                p.speedBoostTimer = 0;
+                p.magnetTimer = 0;
+            });
+        }
+    }
+
+    function cargarNivel(m, n) {
+
+
+        mundoActual = m; nivelActual = n;
+        mundoElement.innerText = mundoActual; nivelElement.innerText = nivelActual;
+        vidasElement.innerText = vidas;
+        respawnX = 50; respawnY = 310;
+        
+        initPlayers();
+        cameraX = 0; bolas = [];
+        currentCacaos = []; currentTrasquiladores = []; currentPowerups = []; currentBloques = [];
+        currentHuecos = []; currentCheckpoints = []; currentPipes = []; currentResortes = []; currentPlataformas = []; currentMonos = []; currentPlantas = []; currentHierbas = [];
+        subRoom = { active: false, cacaos: [], pipes: [] };
+        portal = null; jefe = null;
+        
+        isUnderworld = (nivelActual === 3);
+        skyColor = coloresCielo[mundoActual - 1];
+
+        isBonus = (nivelActual === 'Bonus');
+        fallingCacaos = [];
+        
+        // Configurar el tiempo del nivel
+        if (isBonus) {
+            nivelTimer = 0;
+            tiempoElement.innerText = "---";
+        } else if (nivelActual === 5) {
+            nivelTimer = 60 * 300; // 300 segundos para el jefe (a 60 fps)
+        } else {
+            // Base de 200 segundos, sumando más tiempo en mundos y niveles avanzados
+            nivelTimer = 60 * (200 + (mundoActual * 20) + (nivelActual * 10)); 
+        }
+        if (isBonus) {
+            levelLength = 1200;
+            bonusTimer = 30 * 60; // 30 segundos
+            
+            // Añadir bloques y plataformas para atrapar mejor los cacaos
+            currentPlataformas.push({x: 300, y: ground - 100, width: 150, height: 20});
+            currentPlataformas.push({x: 700, y: ground - 100, width: 150, height: 20});
+            currentBloques.push({x: 530, y: ground - 150, width: 40, height: 40, active: true, hasPowerup: true, powerupType: 'iman', isWall: false});
+            return;
+        }
+        levelLength = (1500 + (mundoActual * 300) + (nivelActual * 200)) * 3;
+        
+        if (nivelActual !== 5) {
+            // Generar tuberías (más tuberías)
+            let numPipes = 2 + (mundoActual % 3); 
+            for(let i=0; i<numPipes; i++) {
+                let px = 500 + (i * 800) + Math.random() * 400;
+                let pipeHeight = 40 + Math.random() * 40;
+                currentPipes.push({x: px, y: ground - pipeHeight, width: 60, height: pipeHeight});
+                
+                // 50% de probabilidad de planta piraña
+                if (Math.random() > 0.5) {
+                    currentPlantas.push({x: px + 10, y: ground - pipeHeight, width: 40, height: 40, baseY: ground - pipeHeight, active: true, timer: 0});
+                }
+            }
+            // Tubería de subRoom
+            if (currentPipes.length > 0) currentPipes[0].isSubRoom = true;
+
+            subRoom.pipes.push({x: 100, y: 310, width: 60, height: 40});
+            subRoom.pipes.push({x: 1500, y: 310, width: 60, height: 40}); 
+            for(let i=0; i<30; i++) subRoom.cacaos.push({x: 250 + i*40, y: 310, collected: false});
+        }
+        
+        if (nivelActual !== 5) { 
+            let numHuecos = (mundoActual + (isUnderworld ? 2 : 0)) * 3; 
+            for(let i=1; i<=numHuecos; i++) {
+                let hx = i * (levelLength / (numHuecos + 1));
+                if (Math.abs(hx - 500) < 150) hx += 200; 
+                currentHuecos.push({x: hx, width: 100 + (mundoActual * 10)});
+            }
+        }
+
+        // Generar Hierbas (para arrancar)
+        if (nivelActual !== 5 && !isBonus) {
+            let numHierbas = mundoActual * 6 + 10;
+            for(let i=0; i<numHierbas; i++) {
+                let hx;
+                let enHueco = true;
+                let intentos = 0;
+                while (enHueco && intentos < 10) {
+                    hx = 600 + Math.random() * (levelLength - 800);
+                    enHueco = false;
+                    currentHuecos.forEach(h => {
+                        if (hx + 30 > h.x - 20 && hx < h.x + h.width + 20) {
+                            enHueco = true;
+                        }
+                    });
+                    intentos++;
+                }
+                if (!enHueco) {
+                    let contentR = Math.random();
+                    let content = 'cacao';
+                    if (contentR < 0.20) content = 'powerup';
+                    else if (contentR < 0.25) content = 'pipe';
+                    currentHierbas.push({x: hx, y: ground - 30, width: 30, height: 30, active: true, content: content});
+                }
+            }
+        }
+        
+        // Generar Plataformas (Flotantes)
+        if (nivelActual !== 5) {
+            let numPlataformas = mundoActual * 4;
+            for(let i=0; i<numPlataformas; i++) {
+                let px = 600 + Math.random() * (levelLength - 1000);
+                let py = ground - 80 - Math.random() * 80; // Altura de la plataforma
+                let pw = 100 + Math.random() * 100; // Ancho de la plataforma
+                currentPlataformas.push({x: px, y: py, width: pw, height: 20});
+            }
+        }
+        
+        // Generar Monos en Árboles (Plataformas muy altas de madera)
+        if (nivelActual === 2 || nivelActual === 4) { // En niveles específicos
+            let numArboles = 2 + mundoActual;
+            for(let i=0; i<numArboles; i++) {
+                let ax = 1000 + Math.random() * (levelLength - 1500);
+                let ay = ground - 180; 
+                // Añadir la plataforma del árbol
+                currentPlataformas.push({x: ax - 20, y: ay, width: 80, height: 20, isTree: true});
+                // Añadir el mono
+                currentMonos.push({x: ax, y: ay - 40, width: 40, height: 40, active: true, shootTimer: Math.random() * 100});
+            }
+        }
+
+        if (nivelActual !== 5) {
+            let cpInterval = levelLength / 3;
+            for(let j=1; j<=2; j++) {
+                let cpX = cpInterval * j;
+                let esSeguro = false;
+                while (!esSeguro) {
+                    esSeguro = true;
+                    for (let i = 0; i < currentHuecos.length; i++) {
+                        let h = currentHuecos[i];
+                        if (cpX + 40 > h.x - 20 && cpX < h.x + h.width + 20) {
+                            cpX = h.x + h.width + 50; 
+                            esSeguro = false; break;
+                        }
+                    }
+                }
+                currentCheckpoints.push({x: cpX, y: 310, width: 40, height: 40, active: false});
+            }
+        }
+        
+        let numCacaos = (10 + mundoActual) * 3; 
+        for(let i=0; i < numCacaos; i++) {
+            currentCacaos.push({x: 800 + (i * 150), y: 310 - (Math.random() > 0.5 ? 60 : 0), collected: false});
+        }
+
+        let numEnemies = (mundoActual + nivelActual) * 3; 
+        if (nivelActual === 5) numEnemies = 0; 
+        for(let i=0; i<numEnemies; i++) {
+            let ex = 400 + i * (levelLength / numEnemies);
+            let speed = 2 + (mundoActual * 0.3);
+            let tipo = 'trasquilador';
+            let eY = 310;
+            let isVolador = false;
+            let r = Math.random();
+            
+            // A partir del Mundo 2 aparecen pumas, a partir del 3 aparecen cóndores
+            if (mundoActual >= 2 && r < 0.35) {
+                tipo = 'puma';
+                speed *= 1.6; // El puma es más rápido
+            } else if (mundoActual >= 3 && r < 0.7) {
+                tipo = 'condor';
+                eY = 100 + Math.random() * 120; // Vuela por el aire
+                isVolador = true;
+                speed *= 1.2;
+            }
+            
+            currentTrasquiladores.push({
+                x: ex, y: eY, width: 40, height: 40, 
+                vx: (i%2==0 ? speed : -speed), 
+                minX: ex-150, maxX: ex+150, 
+                active: true, 
+                tipo: tipo, 
+                volador: isVolador, 
+                baseY: eY, 
+                angle: Math.random() * Math.PI * 2
+            });
+        }
+
+        if (mundoActual === 1 && nivelActual === 1) {
+            currentPowerups.push({x: 300, y: 250, width: 30, height: 30, type: 'ovillo', collected: false});
+            if(numPlayers === 2) currentPowerups.push({x: 350, y: 250, width: 30, height: 30, type: 'ovillo', collected: false});
+        } 
+        
+        let numPowerups = (Math.random() > 0.5 ? (numPlayers===2?3:2) : (numPlayers===2?2:1)) * 3;
+        for(let i=0; i<numPowerups; i++) {
+            let px = 800 + Math.random() * (levelLength - 1000);
+            let rP = Math.random(); let type = 'ovillo'; if (rP < 0.2) type = 'estrella'; else if (rP < 0.4) type = 'chicha'; else if (rP < 0.6) type = 'rayo'; else if (rP < 0.8) type = 'iman';
+            currentPowerups.push({x: px, y: 250, width: 30, height: 30, type: type, collected: false});
+        }
+        
+        if (nivelActual === 4) {
+            currentPowerups.push({x: levelLength * 0.8, y: 250, width: 30, height: 30, type: 'corazon', collected: false});
+        }
+
+        if (nivelActual !== 5) {
+            let numBloques = (mundoActual + 2) * 5;
+            for(let i=0; i<numBloques; i++) {
+                let bx = 600 + Math.random() * (levelLength - 1000);
+                let by = ground - 100 - (Math.random() > 0.5 ? 80 : 0); // Pueden estar a 1 o 2 alturas de salto
+                
+                // Algunos bloques tienen powerup
+                let hasPowerup = Math.random() < 0.3;
+                let powerupType = 'ninguno';
+                if (hasPowerup) {
+                    let rB = Math.random(); powerupType = 'ovillo'; if (rB < 0.2) powerupType = 'estrella'; else if (rB < 0.4) powerupType = 'chicha'; else if (rB < 0.6) powerupType = 'rayo'; else if (rB < 0.8) powerupType = 'iman';
+                }
+                currentBloques.push({x: bx, y: by, width: 40, height: 40, active: true, hasPowerup: hasPowerup, powerupType: powerupType, isWall: false});
+            }
+            // Paredes (bloques apilados en el suelo)
+            let numParedes = mundoActual;
+            for(let i=0; i<numParedes; i++) {
+                let px = 800 + Math.random() * (levelLength - 1500);
+                let alturaPared = Math.floor(Math.random() * 3) + 2; // 2 a 4 bloques de alto
+                for(let j=0; j<alturaPared; j++) {
+                    currentBloques.push({x: px, y: ground - 40 - (j * 40), width: 40, height: 40, active: true, hasPowerup: false, powerupType: 'ninguno', isWall: true});
+                }
+                // Si la pared es muy alta (3 o 4 bloques), colocamos un resorte un poco antes
+                if (alturaPared >= 3) {
+                    currentResortes.push({x: px - 50, y: ground - 40, width: 40, height: 40});
+                }
+            }
+        }
+
+        if (nivelActual === 5) {
+            jefe = { x: levelLength - 200, y: 250, width: 100, height: 100, hp: mundoActual * (numPlayers === 2 ? 3 : 2) + 1, active: true, vx: 3, minX: levelLength - 500, maxX: levelLength };
+        } else {
+            portal = {x: levelLength, y: 290, width: 60, height: 60};
+        }
+    }
+
+    const keys = {};
+    window.addEventListener('keydown', e => { 
+        keys[e.code] = true; 
+        if (e.code === 'KeyM') {
+            musicMuted = !musicMuted;
+            if (musicMuted) stopMusic();
+            else if (gameStarted) startMusic();
+        }
+        if (e.code === 'Escape' && gameStarted) { if(!inMapMode) { inMapMode = true; return; } else { volverAlMenu(); return; } }
+        if (gameStarted && (gameOver || gameWon) && e.code === 'Enter') {
+            if (gameWon) volverAlMenu();
+            else {
+                gameOver = false; gameWon = false; score = 0; vidas = 5;
+                players = []; // Reset players on game over restart
+                scoreElement.innerText = score; vidasElement.innerText = vidas;
+                mensajeElement.style.display = 'none'; cargarNivel(mundoActual, nivelActual);
+            }
+        }
+    });
+    window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+    function checkCollision(rect1, rect2) {
+        return rect1.x < rect2.x + rect2.width && rect1.x + rect1.width > rect2.x && rect1.y < rect2.y + rect2.height && rect1.height + rect1.y > rect2.y;
+    }
+
+    const sprites = {
+        llama: ["   W   W  ","   WW WW  ","  WWWWWW  ","  WW P B  ","  WWWWWW  "," FFFFFFFF "," FFFFFFFF "," FFFFFFFF ","  FF  FF  ","  FF  FF  "],
+        stickman: ["   TTTT   ","  T    T  ","  T    T  ","   TTTT   ","    TT    "," TTTTTTTT "," T  TT  T "," T  TT  T ","   T  T   ","  TT  TT  "],
+        hierba: ["        ","        ","        ","        ","        ","   UU   ","  UVVU  ","  U  U  "],
+        cacao: ["        ","   DD   ","  DLLD  ","  DLLD  ","  DLLD  ","   DD   ","        ","        "],
+        resorte: ["        ","        ","        ","  WWWW  "," SSSSSS "," R    R "," SSSSSS "," R    R "],
+        condor: [" C    C "," CC  CC ","CCCCCCCC","  WWWW  ","  WWWW  "," C    C ","        ","        "],
+        puma: ["        ","   OO   ","  OOOO  "," OOBBOO "," OOOOOO ","  O  O  ","  O  O  ","        "],
+        trasquilador: ["  EE    ","  EB    "," SEES   ","S EE S  ","S EE S  ","  EE    "," E  E   "," E  E   "],
+        mono: [" M    M "," MM  MM "," MMMMMM "," MBMMBM "," MMMMMM ","  M  M  ","  M  M  ","        "],
+        coco: ["        ","  LLLL  "," LLLL L "," L LL L "," LLLLLL ","  LLLL  ","        ","        "],
+        planta: ["  RRRR  "," RRRRRR "," WWWWWW "," GGGGGG ","   GG   ","   GG   ","   GG   ","        "],
+        jefe: ["  RR    "," RRRR   "," SRRS   ","S RR S  ","S RR S  ","  RR    "," R  R   "," R  R   "],
+        estrella: ["   YY   ","  YYYY  "," YYYYYY ","YYYYYYYY"," YYYYYY ","  YYYY  "," Y    Y ","Y      Y"],
+        chicha: ["   GG   ","  GGGG  "," MMMM   "," MMMMMM "," MMMMMM "," MMMMMM ","  MMMM  ","   MM   "],
+        corazon: ["  RR RR  "," RRRRRRR "," RRRRRRR ","  RRRRR  ","   RRR   ","    R    ","         ","         "],
+        rayo: ["   YY   ","  YYYY  ","  YY    "," YYYY   ","  YY    ","  Y     ","        ","        "],
+        iman: [" R    R "," R    R "," S    S "," S    S "," S    S ","  SSSS  ","   SS   ","        "],
+        ovillo: ["  WWWW  "," WWWWWW "," WWBBWW "," WWBBWW "," WWWWWW ","  WWWW  ","   WW   ","        "],
+        puerta: [" TTTTTT "," T    T "," T    T "," T    T "," T    T "," T    T "," T    T "," T    T "],
+        banderaRoja: ["    RR  ","   RRRR ","  RRRRR "," S  RR  "," S      "," S      "," S      "," S      "],
+        banderaVerde: ["    VV  ","   VVVV ","  VVVVV "," S  VV  "," S      "," S      "," S      "," S      "],
+        bloque: [" BBBBBB "," BXXXXB "," BXXXXB "," BXXXXB "," BXXXXB "," BXXXXB "," BXXXXB "," BBBBBB "],
+    };
+
+    const colores = {'W': '#FFFFFF', 'B': '#000000', 'P': '#FF69B4', 'F': '#FFF8DC', 'D': '#5C3A21', 'L': '#A0522D', 'E': '#2F4F4F', 'S': '#C0C0C0', 'R': '#FF0000', 'Y': '#FFD700', 'M': '#8A2BE2', 'G': '#A9A9A9', 'T': '#00CED1', 'V': '#32CD32', 'X': '#8B4513', 'C': '#191970', 'O': '#FF8C00', 'U': '#006400'};
+
+    function drawSprite(spriteName, x, y, ancho, flashType = 0) {
+        const sprite = sprites[spriteName];
+        const filas = sprite.length, columnas = sprite[0].length;
+        const tamPixelX = ancho / columnas, tamPixelY = ancho / filas;
+        for(let r = 0; r < filas; r++) {
+            for(let c = 0; c < columnas; c++) {
+                const char = sprite[r][c];
+                if(char !== ' ') {
+                    let color = colores[char];
+                    if (flashType === 1 && (char === 'F' || char === 'T')) color = Math.random() > 0.5 ? '#FFD700' : '#FFFFFF'; 
+                    if (flashType === 2 && (char === 'F' || char === 'T')) color = '#8A2BE2'; 
+                    if (flashType === 4 && (char === 'F' || char === 'T')) color = '#FFFFFF'; 
+                    if (flashType === 3) color = 'rgba(255,255,255,0.5)'; 
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x + c * tamPixelX, y + r * tamPixelY, tamPixelX, tamPixelY);
+                }
+            }
+        }
+    }
+
+    function drawPipe(x, y) {
+        ctx.fillStyle = '#006400'; ctx.fillRect(x, y, 60, canvas.height - y);
+        ctx.fillStyle = '#32CD32'; ctx.fillRect(x + 5, y, 50, canvas.height - y);
+        ctx.fillStyle = '#006400'; ctx.fillRect(x - 5, y, 70, 20);
+        ctx.fillStyle = '#32CD32'; ctx.fillRect(x - 3, y + 2, 66, 16);
+    }
+
+            function recibirDanoEnemigo(player) {
+        playSound('hurt');
+        if (player.hasWoolPower) { player.hasWoolPower = false; player.flashHitTimer = 60; }
+        else if (vidas > 1) { vidas--; vidasElement.innerText = vidas; player.flashHitTimer = 60; }
+        else {
+            vidas = 0; vidasElement.innerText = vidas; gameOver = true;
+            mensajeElement.innerHTML = "¡ATRAPADOS!<br><br>Se han quedado sin vidas.<br><br>Presiona ENTER para reiniciar.";
+            mensajeElement.style.color = "red"; mensajeElement.style.display = 'block';
+        }
+    }
+
+    function caerAlPrecipicio(playerFall) {
+        playSound('hurt');
+        if (vidas > 1) {
+            vidas--; vidasElement.innerText = vidas;
+            let otherPlayer = players.find(p => p.id !== playerFall.id);
+            if (otherPlayer && otherPlayer.y <= ground) { playerFall.x = otherPlayer.x; playerFall.y = otherPlayer.y - 50; }
+            else { playerFall.x = respawnX; playerFall.y = respawnY - 50; }
+            playerFall.vx = 0; playerFall.vy = 0; playerFall.flashHitTimer = 60;
+        } else {
+            vidas = 0; vidasElement.innerText = vidas; gameOver = true;
+            mensajeElement.innerHTML = "¡CAYERON!<br><br>Se han quedado sin vidas.<br><br>Presiona ENTER para reiniciar.";
+            mensajeElement.style.color = "red"; mensajeElement.style.display = 'block';
+        }
+    }
+
+        function resolveCollision(player, block) {
+        if (!block.active) return;
+        // Simple AABB collision check first
+        if (player.x < block.x + block.width &&
+            player.x + player.width > block.x &&
+            player.y < block.y + block.height &&
+            player.height + player.y > block.y) {
+            
+            // Determine side of collision
+            let dx = (player.x + player.width / 2) - (block.x + block.width / 2);
+            let dy = (player.y + player.height / 2) - (block.y + block.height / 2);
+            let width = (player.width + block.width) / 2;
+            let height = (player.height + block.height) / 2;
+            let crossWidth = width * dy;
+            let crossHeight = height * dx;
+
+            if (Math.abs(dx) <= width && Math.abs(dy) <= height) {
+                if (crossWidth > crossHeight) {
+                    if (crossWidth > -crossHeight) { // Bottom
+                        let prevVy = player.vy;
+                        player.y = block.y + block.height;
+                        player.vy = 0;
+                        // Si golpea desde abajo con fuerza (vy < 0) y no es pared, puede romperlo
+                        if (prevVy < 0 && !block.isWall) {
+                            block.active = false;
+                            playSound('enemyDie'); // Reuse sound for breaking block
+                            if (block.hasPowerup) {
+                                currentPowerups.push({x: block.x + 5, y: block.y - 30, width: 30, height: 30, type: block.powerupType, collected: false});
+                                playSound('jump'); // Sound to indicate powerup spawned
+                            }
+                        }
+                    } else { // Left
+                        player.x = block.x - player.width;
+                        player.vx = 0;
+                    }
+                } else {
+                    if (crossWidth > -crossHeight) { // Right
+                        player.x = block.x + block.width;
+                        player.vx = 0;
+                    } else { // Top
+                        player.y = block.y - player.height;
+                        player.vy = 0;
+                        player.grounded = true;
+                    }
+                }
+            }
+        }
+    }
+
+    function update() {
+        if (gameOver || gameWon || !gameStarted) return;
+        
+        if (inCutscene) {
+            cutsceneTimer++;
+            if (keys['Space'] || keys['Enter']) {
+                keys['Space'] = false; keys['Enter'] = false;
+                cutsceneTimer = 9999; // Saltar
+            }
+            
+            if (cutsceneTimer > 180) { // 3 segs a 60fps
+                cutsceneTimer = 0;
+                cutsceneStep++;
+                if (cutsceneStep >= cutsceneTexts.length) {
+                    inCutscene = false;
+                    inMapMode = true;
+                    mapCurrentIndex = maxUnlockedIndex;
+                }
+            }
+            return;
+        }
+
+        if (nivelTimer > 0 && !isBonus && !subRoom.active) {
+            nivelTimer--;
+            tiempoElement.innerText = Math.ceil(nivelTimer / 60);
+            
+            // Si el tiempo llega a 0, pierde una vida
+            if (nivelTimer <= 0) {
+                players.forEach(p => caerAlPrecipicio(p));
+            }
+        } else if (subRoom.active || isBonus) {
+            tiempoElement.innerText = "---";
+        }
+
+        if (inMapMode) {
+            if (mapMoveTimer > 0) mapMoveTimer--;
+            else {
+                if (keys['ArrowRight'] || keys['KeyD']) {
+                    if (mapCurrentIndex < maxUnlockedIndex) { mapCurrentIndex++; mapMoveTimer = 10; playSound('jump'); }
+                } else if (keys['ArrowLeft'] || keys['KeyA']) {
+                    if (mapCurrentIndex > 0) { mapCurrentIndex--; mapMoveTimer = 10; playSound('jump'); }
+                } else if (keys['Space'] || keys['Enter']) {
+                    keys['Space'] = false; keys['Enter'] = false;
+                    inMapMode = false;
+                    cargarNivel(mapNodes[mapCurrentIndex].mundo, mapNodes[mapCurrentIndex].nivel);
+                }
+            }
+            return;
+        }
+        efectoElement.innerText = ""; let efectosText = [];
+
+        players.forEach(p => {
+            if (p.invincibilityTimer > 0) p.invincibilityTimer--;
+            if (p.superJumpTimer > 0) p.superJumpTimer--;
+            if (p.speedBoostTimer > 0) p.speedBoostTimer--;
+            if (p.magnetTimer > 0) p.magnetTimer--;
+            if (p.flashHitTimer > 0) p.flashHitTimer--;
+            if (p.shootCooldown > 0) p.shootCooldown--;
+
+            p.speed = (p.speedBoostTimer > 0) ? 9 : 5;
+
+            if (p.invincibilityTimer > 0 && !efectosText.includes("ESTRELLA")) efectosText.push("ESTRELLA");
+            if (p.superJumpTimer > 0 && !efectosText.includes("SÚPER SALTO")) efectosText.push("SÚPER SALTO");
+            if (p.speedBoostTimer > 0 && !efectosText.includes("VELOCIDAD")) efectosText.push("VELOCIDAD");
+            if (p.magnetTimer > 0 && !efectosText.includes("IMÁN")) efectosText.push("IMÁN");
+            if (p.hasWoolPower && !efectosText.includes("LANA")) efectosText.push("LANA");
+            
+            // Lógica del Imán
+            if (p.magnetTimer > 0) {
+                let listCacaos = subRoom.active ? subRoom.cacaos : currentCacaos;
+                listCacaos.forEach(c => {
+                    if (!c.collected) {
+                        let dx = (p.x + p.width/2) - (c.x + 15); // El cacao mide aprox 30x30, su centro es 15
+                        let dy = (p.y + p.height/2) - (c.y + 15);
+                        let dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < 200) { // Radio de atracción
+                            c.x += dx * 0.08;
+                            c.y += dy * 0.08;
+                        }
+                    }
+                });
+            }
+
+            if (keys[p.keys.left]) { p.vx = -p.speed; p.facingRight = false; }
+            else if (keys[p.keys.right]) { p.vx = p.speed; p.facingRight = true; }
+            else { p.vx = 0; }
+
+            let curJumpPower = (p.superJumpTimer > 0) ? p.jumpPowerSuper : p.jumpPowerNormal;
+            if (keys[p.keys.up] && p.grounded) { 
+                p.vy = curJumpPower; 
+                p.grounded = false; 
+                playSound('jump');
+            }
+
+            if (keys[p.keys.down] && p.grounded) {
+                let plucked = false;
+                if (!subRoom.active) {
+                    currentHierbas.forEach(h => {
+                        if (h.active && p.x + p.width > h.x && p.x < h.x + h.width && Math.abs((p.y + p.height) - (h.y + h.height)) < 25) {
+                            h.active = false;
+                            plucked = true;
+                            playSound('jump');
+                            if (h.content === 'cacao') {
+                                bolas.push({ x: h.x, y: h.y, vx: (Math.random()-0.5)*4, vy: -8, width: 30, height: 30, hit: false, owner: 'pop', isCoco: false, isCacao: true });
+                                score += 2; // Bono instantáneo
+                            } else if (h.content === 'powerup') {
+                                let rP = Math.random(); let pType = 'ovillo'; if (rP < 0.2) pType = 'estrella'; else if (rP < 0.4) pType = 'chicha'; else if (rP < 0.6) pType = 'rayo'; else if (rP < 0.8) pType = 'iman';
+                                currentPowerups.push({x: h.x, y: h.y - 30, width: 30, height: 30, type: pType, collected: false});
+                            } else if (h.content === 'pipe') {
+                                currentPipes.push({x: h.x - 15, y: ground - 60, width: 60, height: 60, isSubRoom: true});
+                                playSound('enemyDie'); // Sonido de que emergió algo grande
+                            }
+                        }
+                    });
+                }
+                
+                if (plucked) {
+                    keys[p.keys.down] = false;
+                } else {
+                    let activePipes = subRoom.active ? subRoom.pipes : currentPipes;
+                    let touchedPipe = false;
+                    activePipes.forEach(pipe => { 
+                        if (p.x + p.width > pipe.x && p.x < pipe.x + pipe.width && Math.abs((p.y + p.height) - pipe.y) < 15) {
+                            if (subRoom.active || pipe.isSubRoom) touchedPipe = true; 
+                        }
+                    });
+                    if (touchedPipe) {
+                        subRoom.active = !subRoom.active;
+                        
+                        // REGENERAR CACAOS AL ENTRAR AL SUBSUELO
+                        if (subRoom.active) {
+                            subRoom.cacaos = [];
+                            for(let i=0; i<30; i++) subRoom.cacaos.push({x: 250 + i*40, y: 310, collected: false});
+                        }
+                        
+                        let destX = subRoom.active ? subRoom.pipes[0].x + 80 : currentPipes[0].x + 80;
+                        players.forEach(pl => { pl.x = destX + (pl.id * 10); pl.y = 100; pl.vx = 0; pl.vy = 0; });
+                        keys[p.keys.down] = false; 
+                        playSound('jump');
+                    }
+                }
+            }
+
+            p.vy += 0.6; p.x += p.vx; p.y += p.vy;
+            // if (p.x < cameraX) p.x = cameraX; // Límite izquierdo eliminado
+
+            // Colisiones con bloques, plataformas y resortes
+            if (!subRoom.active) {
+                currentPlataformas.forEach(plat => {
+                    // Solo colisión desde arriba (jump-through)
+                    if (p.vy >= 0 && 
+                        p.y + p.height - p.vy <= plat.y && 
+                        p.y + p.height >= plat.y &&
+                        p.x + p.width > plat.x && 
+                        p.x < plat.x + plat.width) {
+                        
+                        p.y = plat.y - p.height;
+                        p.vy = 0;
+                        p.grounded = true;
+                    }
+                });
+                currentBloques.forEach(b => {
+                    resolveCollision(p, b);
+                });
+                currentPipes.forEach(pipe => {
+                    resolveCollision(p, { x: pipe.x, y: pipe.y, width: pipe.width, height: pipe.height, active: true, isWall: true });
+                });
+                
+                currentResortes.forEach(res => {
+                    if (checkCollision(p, res)) {
+                        // Súper salto de resorte (más alto que el normal de -12)
+                        p.vy = -18; 
+                        p.grounded = false;
+                        p.y = res.y - p.height; // Evitar quedarse atorado
+                        playSound('jump');
+                    }
+                });
+            } else {
+                subRoom.pipes.forEach(pipe => {
+                    resolveCollision(p, { x: pipe.x, y: pipe.y, width: pipe.width, height: pipe.height, active: true, isWall: true });
+                });
+            }
+
+            let overHole = false;
+            if (!subRoom.active && nivelActual !== 5) { 
+                currentHuecos.forEach(h => { if (p.x + p.width / 2 > h.x && p.x + p.width / 2 < h.x + h.width) overHole = true; }); 
+            }
+            let targetGround = overHole ? canvas.height + 200 : ground; 
+            if (p.y + p.height >= targetGround && !overHole) { p.y = ground - p.height; p.vy = 0; p.grounded = true; }
+            if (p.y > canvas.height) caerAlPrecipicio(p);
+
+            if (keys[p.keys.shoot] && p.hasWoolPower && p.shootCooldown === 0) {
+                bolas.push({ x: p.facingRight ? p.x + p.width : p.x, y: p.y + 10, vx: p.facingRight ? 10 : -10, vy: -3, width: 15, height: 15, hit: false, owner: p.id });
+                p.shootCooldown = 15;
+                playSound('shoot');
+            }
+        });
+
+        if (musicMuted && !efectosText.includes("MUTE")) efectosText.push("MÚSICA MUTEADA");
+        if (efectosText.length > 0) efectoElement.innerText = "ESTADO: " + efectosText.join(" | ");
+
+        bolas.forEach(b => {
+            b.x += b.vx; b.y += b.vy; b.vy += 0.5;
+            if (b.y > ground - b.height) { b.y = ground - b.height; b.vy = -6; }
+            if (b.x < cameraX - 200 || b.x > cameraX + 1000) b.hit = true;
+            if (b.isCoco) {
+                players.forEach(p => {
+                    if (!b.hit && p.flashHitTimer === 0 && checkCollision(p, b)) {
+                        if (p.invincibilityTimer === 0) recibirDanoEnemigo(p);
+                        b.hit = true;
+                    }
+                });
+            } else if (b.isCacao) {
+                players.forEach(p => {
+                    if (!b.hit && checkCollision(p, b)) {
+                        b.hit = true;
+                        score++;
+                        scoreElement.innerText = score;
+                        playSound('collect');
+                    }
+                });
+            }
+            let activePipesProj = subRoom.active ? subRoom.pipes : currentPipes;
+            activePipesProj.forEach(pipe => {
+                if (b.x + b.width > pipe.x && b.x < pipe.x + pipe.width && b.y + b.height > pipe.y && b.y < pipe.y + pipe.height) {
+                    b.hit = true;
+                }
+            });
+            currentBloques.forEach(blk => {
+                if (blk.active && b.x + b.width > blk.x && b.x < blk.x + blk.width && b.y + b.height > blk.y && b.y < blk.y + blk.height) {
+                    b.hit = true;
+                    if (!blk.isWall) {
+                        blk.active = false;
+                        playSound('enemyDie');
+                        if (blk.hasPowerup) {
+                            currentPowerups.push({x: blk.x + 5, y: blk.y - 30, width: 30, height: 30, type: blk.powerupType, collected: false});
+                            playSound('jump');
+                        }
+                    }
+                }
+            });
+        });
+
+        
+        if (isBonus) {
+            if (bonusTimer > 0) {
+                bonusTimer--;
+                if (bonusTimer % 15 === 0) {
+                    fallingCacaos.push({x: cameraX + Math.random() * canvas.width, y: -30, width: 30, height: 30, vy: 3 + Math.random()*4, collected: false});
+                }
+                if (bonusTimer === 0) {
+                    portal = {x: 1000, y: ground - 60, width: 60, height: 60};
+                    playSound('collect');
+                }
+            }
+            fallingCacaos.forEach(c => {
+                c.y += c.vy;
+                if (c.y > canvas.height) c.collected = true;
+                players.forEach(p => {
+                    if (!c.collected && checkCollision(p, c)) {
+                        c.collected = true; score++; scoreElement.innerText = score;
+                        playSound('collect');
+                    }
+                    if (p.magnetTimer > 0 && !c.collected) {
+                        let dx = (p.x + p.width/2) - (c.x + 15);
+                        let dy = (p.y + p.height/2) - (c.y + 15);
+                        let dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < 200) { c.x += dx * 0.08; c.y += dy * 0.08; }
+                    }
+                });
+            });
+            fallingCacaos = fallingCacaos.filter(c => !c.collected);
+            
+            // Límite de mapa
+            players.forEach(p => {
+                if (p.x < 0) p.x = 0;
+                if (p.x > 1200) p.x = 1200;
+            });
+        }
+
+        let avgX = 0; players.forEach(p => avgX += p.x); avgX /= players.length;
+        let targetCameraX = avgX - canvas.width / 3;
+        cameraX = Math.max(0, targetCameraX); // La cámara ahora puede retroceder
+
+        if (!subRoom.active) {
+            currentCheckpoints.forEach(cp => {
+                let passed = false;
+                players.forEach(p => { if (p.x > cp.x) passed = true; });
+                if (!cp.active && passed) { 
+                    cp.active = true; respawnX = cp.x; respawnY = ground - players[0].height;
+                    playSound('collect'); 
+                }
+            });
+        }
+
+        players.forEach(p => {
+            let listCacaos = subRoom.active ? subRoom.cacaos : currentCacaos;
+            listCacaos.forEach(c => {
+                if (!c.collected && checkCollision(p, {x: c.x, y: c.y, width: 30, height: 30})) {
+                    c.collected = true; score++; scoreElement.innerText = score;
+                    playSound('collect');
+                }
+            });
+
+            if (!subRoom.active) {
+                currentPowerups.forEach(pow => {
+                    if (!pow.collected && checkCollision(p, pow)) {
+                        pow.collected = true;
+                        playSound('collect');
+                        if (pow.type === 'estrella') p.invincibilityTimer = 400;
+                        else if (pow.type === 'chicha') p.superJumpTimer = 400;
+                        else if (pow.type === 'rayo') p.speedBoostTimer = 400;
+                        else if (pow.type === 'iman') p.magnetTimer = 500;
+                        else if (pow.type === 'ovillo') p.hasWoolPower = true;
+                        else if (pow.type === 'corazon') { vidas++; vidasElement.innerText = vidas; }
+                    }
+                });
+            }
+        });
+
+        if (!subRoom.active) {
+            let touchedPortal = false;
+            players.forEach(p => { if (portal && checkCollision(p, portal)) touchedPortal = true; });
+            if (touchedPortal) {
+                let currentIndex = mapNodes.findIndex(n => n.mundo === mundoActual && n.nivel === nivelActual);
+                if (currentIndex === maxUnlockedIndex && maxUnlockedIndex < mapNodes.length - 1) {
+                    maxUnlockedIndex++;
+                }
+                inMapMode = true;
+                mapCurrentIndex = currentIndex + (currentIndex < mapNodes.length - 1 ? 1 : 0);
+                playSound('collect');
+                
+                if (currentIndex === mapNodes.length - 1) {
+                    gameWon = true;
+                    inMapMode = false;
+                    mensajeElement.innerHTML = "¡JUEGO COMPLETADO!<br><br>¡Felicidades Pablo!<br><br>Presiona ENTER para ir al Inicio.";
+                    mensajeElement.style.color = "#32CD32"; mensajeElement.style.display = 'block';
+                }
+                return;
+            }
+
+            currentTrasquiladores.forEach(t => {
+                if (!t.active) return;
+                t.x += t.vx;
+                
+                if (t.volador) {
+                    t.angle += 0.05;
+                    t.y = t.baseY + Math.sin(t.angle) * 40; // Movimiento de ola (senoidal)
+                }
+                
+                let enemyOverHole = false;
+                let hitPipe = false;
+                if (!t.volador) {
+                    currentHuecos.forEach(h => { if (t.x + t.width/2 > h.x && t.x + t.width/2 < h.x + h.width) enemyOverHole = true; });
+                    currentPipes.forEach(pipe => {
+                        if (t.x + t.width > pipe.x && t.x < pipe.x + pipe.width && t.y + t.height > pipe.y) {
+                            hitPipe = true;
+                            if (t.vx > 0) t.x = pipe.x - t.width - 1;
+                            else t.x = pipe.x + pipe.width + 1;
+                        }
+                    });
+                }
+                if (t.x <= t.minX || t.x + t.width >= t.maxX || enemyOverHole || hitPipe) t.vx *= -1;
+
+                players.forEach(p => {
+                    if (t.active && checkCollision(p, t)) {
+                        if (p.vy > 0 && p.y + p.height < t.y + t.height / 2) {
+                            t.active = false;
+                            p.vy = p.jumpPowerNormal; 
+                            score += 5;
+                            scoreElement.innerText = score;
+                            playSound('enemyDie');
+                        } else if (p.invincibilityTimer > 0) { 
+                            t.active = false; score += 5; scoreElement.innerText = score; 
+                            playSound('enemyDie');
+                        }
+                        else if (p.flashHitTimer === 0) { recibirDanoEnemigo(p); p.vy = p.jumpPowerNormal; }
+                    }
+                });
+                bolas.forEach(b => {
+                    if (!b.hit && checkCollision(b, t)) { t.active = false; b.hit = true; score += 5; scoreElement.innerText = score; playSound('enemyDie'); }
+                });
+            });
+
+            
+            // Monos (Tiran cocos)
+            currentMonos.forEach(m => {
+                if (!m.active) return;
+                m.shootTimer++;
+                if (m.shootTimer > 150) {
+                    m.shootTimer = 0;
+                    // Encontrar jugador más cercano
+                    let target = players[0];
+                    if (players.length > 1 && Math.abs(players[1].x - m.x) < Math.abs(players[0].x - m.x)) target = players[1];
+                    
+                    if (Math.abs(target.x - m.x) < 600) { // Si está cerca
+                        let vx = (target.x < m.x) ? -4 : 4;
+                        bolas.push({ x: m.x, y: m.y + 10, vx: vx, vy: -2, width: 20, height: 20, hit: false, owner: 'mono', isCoco: true });
+                        playSound('shoot'); // Opcional sonido
+                    }
+                }
+                
+                players.forEach(p => {
+                    if (m.active && checkCollision(p, m)) {
+                        if (p.vy > 0 && p.y + p.height < m.y + m.height / 2) {
+                            m.active = false; p.vy = p.jumpPowerNormal; score += 10; scoreElement.innerText = score; playSound('enemyDie');
+                        } else if (p.invincibilityTimer > 0) {
+                            m.active = false; score += 10; scoreElement.innerText = score; playSound('enemyDie');
+                        } else if (p.flashHitTimer === 0) { recibirDanoEnemigo(p); p.vy = p.jumpPowerNormal; }
+                    }
+                });
+                bolas.forEach(b => {
+                    if (!b.hit && b.owner !== 'mono' && checkCollision(b, m)) { m.active = false; b.hit = true; score += 10; scoreElement.innerText = score; playSound('enemyDie'); }
+                });
+            });
+
+            // Plantas Piraña
+            currentPlantas.forEach(pl => {
+                if (!pl.active) return;
+                pl.timer += 0.05;
+                pl.y = pl.baseY + Math.sin(pl.timer) * 40; // Suben y bajan
+                
+                players.forEach(p => {
+                    if (pl.y < pl.baseY + 20 && checkCollision(p, pl)) { // Si está asomada
+                        if (p.invincibilityTimer > 0) {
+                            pl.active = false; score += 5; scoreElement.innerText = score; playSound('enemyDie');
+                        } else if (p.flashHitTimer === 0) { recibirDanoEnemigo(p); p.vy = p.jumpPowerNormal; }
+                    }
+                });
+                bolas.forEach(b => {
+                    if (!b.hit && pl.y < pl.baseY + 20 && checkCollision(b, pl)) { pl.active = false; b.hit = true; score += 5; scoreElement.innerText = score; playSound('enemyDie'); }
+                });
+            });
+
+            if (jefe && jefe.active) {
+                jefe.x += jefe.vx;
+                if (jefe.x <= jefe.minX || jefe.x + jefe.width >= jefe.maxX) jefe.vx *= -1;
+                players.forEach(p => {
+                    if (checkCollision(p, jefe)) {
+                        if (p.vy > 0 && p.y + p.height < jefe.y + jefe.height / 2) {
+                            jefe.hp--; p.vy = p.jumpPowerNormal; 
+                            playSound('enemyDie');
+                            if (jefe.hp <= 0) matarJefe();
+                        } else {
+                            if (p.invincibilityTimer > 0) { p.vy = p.jumpPowerNormal; p.invincibilityTimer = 0; p.flashHitTimer = 30; playSound('enemyDie'); } 
+                            else if (p.flashHitTimer === 0) { recibirDanoEnemigo(p); p.vy = p.jumpPowerNormal; p.vx = -10; }
+                        }
+                    }
+                });
+                bolas.forEach(b => {
+                    if (!b.hit && checkCollision(b, jefe)) { jefe.hp--; b.hit = true; playSound('enemyDie'); if (jefe.hp <= 0) matarJefe(); }
+                });
+            }
+        }
+        bolas = bolas.filter(b => !b.hit);
+        
+        // 100 Cacaos = 1 Vida Extra
+        if (score >= 100) {
+            score -= 100;
+            vidas++;
+            scoreElement.innerText = score;
+            vidasElement.innerText = vidas;
+            playSound('collect');
+            if (!efectosText.includes("¡1UP!")) efectosText.push("¡1UP!");
+        }
+    }
+
+    function matarJefe() { jefe.active = false; portal = {x: jefe.x, y: 290, width: 60, height: 60}; playSound('collect'); }
+
+            function drawMap() {
+        let targetMapCameraX = mapNodes[mapCurrentIndex].x - canvas.width / 2;
+        mapCameraX += (targetMapCameraX - mapCameraX) * 0.1;
+        if (mapCameraX < 0) mapCameraX = 0;
+        let maxCam = (8 * 600) - canvas.width;
+        if (mapCameraX > maxCam) mapCameraX = maxCam;
+
+        ctx.save();
+        ctx.translate(-mapCameraX, 0);
+
+        // Biomas
+        for(let m = 0; m < 8; m++) {
+            let startX = m * 600;
+            ctx.fillStyle = biomes[m].bg;
+            ctx.fillRect(startX, 0, 600, canvas.height);
+            
+            // Decoraciones estilo Pixel Art (cruces gruesas/nubes bloque)
+            ctx.fillStyle = biomes[m].p;
+            for(let d=0; d<5; d++) {
+                let dx = startX + 80 + d*100;
+                let dy = 100 + (d%2)*180;
+                ctx.fillRect(dx - 30, dy - 10, 60, 20);
+                ctx.fillRect(dx - 10, dy - 30, 20, 60);
+            }
+        }
+
+        // Ríos con bordes de sierra (pixelados)
+        for(let m = 1; m < 8; m++) {
+            let riverX = m * 600 - 30;
+            for(let ry=0; ry<canvas.height; ry+=20) {
+               let offset = (ry%40 === 0) ? 0 : 10;
+               ctx.fillStyle = '#1E90FF'; 
+               ctx.fillRect(riverX - offset, ry, 60, 20);
+            }
+            // Ondas de agua cuadradas
+            ctx.fillStyle = '#87CEFA';
+            for(let w=0; w<10; w++) {
+                ctx.fillRect(riverX + 10 + (w%2)*20, w*40 + (Date.now()/50)%40 - 20, 15, 15);
+            }
+        }
+
+        // Caminos (Puntos Pixelados)
+        for(let i=0; i<mapNodes.length - 1; i++) {
+            let n1 = mapNodes[i];
+            let n2 = mapNodes[i+1];
+            
+            if ((i + 1) % 5 === 0) {
+                if (i < maxUnlockedIndex) {
+                    // Puente de madera pixel
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(n1.x, n1.y - 15, n2.x - n1.x, 30);
+                    ctx.fillStyle = '#D2B48C';
+                    for(let px = n1.x; px < n2.x; px += 20) {
+                        ctx.fillRect(px + 4, n1.y - 15, 12, 30);
+                    }
+                } else {
+                    // Puente sin construir (puntos)
+                    let steps = 10;
+                    for(let j=0; j<steps; j++) {
+                        let px = n1.x + ((n2.x - n1.x) * (j/steps));
+                        let py = n1.y + ((n2.y - n1.y) * (j/steps));
+                        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                        ctx.fillRect(px - 4, py - 4, 8, 8);
+                    }
+                }
+            } else {
+                // Camino regular (puntos)
+                let dx = n2.x - n1.x; let dy = n2.y - n1.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                let steps = Math.floor(dist / 15);
+                for(let j=0; j<steps; j++) {
+                    let px = n1.x + (dx * (j/steps));
+                    let py = n1.y + (dy * (j/steps));
+                    ctx.fillStyle = (i < maxUnlockedIndex) ? '#FFFFFF' : 'rgba(255,255,255,0.4)';
+                    ctx.fillRect(px - 4, py - 4, 8, 8);
+                }
+            }
+        }
+
+        // Nodos (Cuadrados Pixelados en lugar de círculos)
+        for(let i=0; i<mapNodes.length; i++) {
+            let node = mapNodes[i];
+            let nSize = 24;
+            
+            // Borde exterior negro
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(node.x - nSize/2, node.y - nSize/2, nSize, nSize);
+            
+            // Color interior
+            if (node.nivel === 5) {
+                ctx.fillStyle = (i <= maxUnlockedIndex) ? '#8A2BE2' : '#4B0082'; 
+            } else if (node.nivel === 'Bonus') {
+                ctx.fillStyle = (i <= maxUnlockedIndex) ? '#FF1493' : '#8B008B'; 
+            } else {
+                ctx.fillStyle = (i <= maxUnlockedIndex) ? '#FFD700' : '#8B0000'; 
+            }
+            ctx.fillRect(node.x - nSize/2 + 4, node.y - nSize/2 + 4, nSize - 8, nSize - 8);
+            
+            if (node.nivel === 1 || node.nivel === 5 || node.nivel === 'Bonus') {
+                ctx.fillStyle = 'white';
+                ctx.font = "8px 'Press Start 2P'";
+                let lbl = (node.nivel===5?"JEFE": (node.nivel==='Bonus'?"BONUS":"M" + node.mundo));
+                ctx.fillText(lbl, node.x - (lbl.length*4), node.y - 20);
+            }
+        }
+        
+        // Jugador
+        let pNode = mapNodes[mapCurrentIndex];
+        drawSprite('llama', pNode.x - 20, pNode.y - 45, 40);
+        
+        ctx.restore();
+
+        // UI
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(0, 0, canvas.width, 40);
+        ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = "14px 'Press Start 2P'";
+        ctx.fillText("MAPA MUNDIAL", 20, 25);
+        
+        ctx.fillStyle = '#FFD700';
+        ctx.font = "12px 'Press Start 2P'";
+        ctx.fillText("MUNDO " + pNode.mundo + "-" + pNode.nivel + " : " + biomes[pNode.mundo-1].desc, 250, 25);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = "10px 'Press Start 2P'";
+        ctx.fillText("PRESIONA ESPACIO PARA ENTRAR AL NIVEL", 20, canvas.height - 15);
+    }
+
+    function draw() {
+        if(!gameStarted) return; 
+        
+        if (inCutscene) {
+            // Fondos de colores por escena
+            const bgColors = ['#87CEEB', '#87CEEB', '#4B0082', '#FF4500'];
+            ctx.fillStyle = bgColors[cutsceneStep] || '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Escenario pixelado de fondo
+            if (cutsceneStep === 0) {
+                ctx.fillStyle = '#A9A9A9'; // Montañas
+                for(let i=-50; i<canvas.width; i+=120) {
+                    ctx.fillRect(i, canvas.height/2 + 20, 100, 200);
+                    ctx.fillRect(i+20, canvas.height/2 - 20, 60, 40);
+                    ctx.fillStyle = 'white'; ctx.fillRect(i+30, canvas.height/2 - 40, 40, 20); ctx.fillStyle = '#A9A9A9';
+                }
+            } else if (cutsceneStep === 1) {
+                 ctx.fillStyle = '#32CD32'; ctx.fillRect(0, canvas.height/2 + 60, canvas.width, canvas.height);
+                 // Nubes pixeladas
+                 ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                 ctx.fillRect(100, 50, 60, 20); ctx.fillRect(120, 30, 20, 60);
+                 ctx.fillRect(500, 80, 60, 20); ctx.fillRect(520, 60, 20, 60);
+            } else if (cutsceneStep === 2) {
+                 ctx.fillStyle = '#111111'; ctx.fillRect(0, canvas.height/2 + 60, canvas.width, canvas.height);
+                 // Estrellas cuadradas
+                 ctx.fillStyle = 'white'; ctx.fillRect(100, 50, 6, 6); ctx.fillRect(300, 80, 6, 6); ctx.fillRect(600, 40, 6, 6); ctx.fillRect(700, 120, 6, 6);
+            } else if (cutsceneStep === 3) {
+                 ctx.fillStyle = '#DAA520'; ctx.fillRect(0, canvas.height/2 + 60, canvas.width, canvas.height);
+                 // Sol cuadrado saliendo
+                 ctx.fillStyle = '#FFD700'; ctx.fillRect(canvas.width/2 - 40, canvas.height/2 + 20, 80, 40);
+            }
+
+            // Fondo negro semitransparente para el texto
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(0, canvas.height/2 - 45, canvas.width, 40);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = "14px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            
+            let text = cutsceneTexts[cutsceneStep];
+            if (text) {
+                ctx.fillText(text, canvas.width/2, canvas.height/2 - 20);
+            }
+            
+            // Dibujos de la cinemática
+            let animOffset = (cutsceneTimer % 20 < 10) ? -2 : 2;
+            if (cutsceneStep === 0) {
+                drawSprite('bloque', canvas.width/2 - 20, canvas.height/2 + 40, 40); 
+            } else if (cutsceneStep === 1) {
+                drawSprite('llama', canvas.width/2 - 40, canvas.height/2 + 40 + animOffset, 40);
+                drawSprite('cacao', canvas.width/2 + 10, canvas.height/2 + 50, 30);
+            } else if (cutsceneStep === 2) {
+                drawSprite('llama', canvas.width/2 - 100, canvas.height/2 + 40, 40, 3); // flash asustado
+                drawSprite('jefe', canvas.width/2, canvas.height/2 + 20 + animOffset, 60); 
+                drawSprite('cacao', canvas.width/2 + 60, canvas.height/2 + 30 + animOffset, 30); 
+            } else if (cutsceneStep === 3) {
+                drawSprite('llama', canvas.width/2 - 100 + (cutsceneTimer*2), canvas.height/2 + 40 + animOffset, 40);
+            }
+            
+            ctx.fillStyle = '#FFD700';
+            ctx.font = "10px 'Press Start 2P'";
+            ctx.fillText("PRESIONA ESPACIO PARA SALTAR", canvas.width/2, canvas.height - 30);
+            ctx.textAlign = "left"; // Reset
+            return;
+        }
+
+        if (nivelTimer > 0 && !isBonus && !subRoom.active) {
+            nivelTimer--;
+            tiempoElement.innerText = Math.ceil(nivelTimer / 60);
+            
+            // Si el tiempo llega a 0, pierde una vida
+            if (nivelTimer <= 0) {
+                players.forEach(p => caerAlPrecipicio(p));
+            }
+        } else if (subRoom.active || isBonus) {
+            tiempoElement.innerText = "---";
+        }
+
+        if (inMapMode) {
+            drawMap();
+            return;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save(); ctx.translate(-cameraX, 0);
+
+        // --- ESTILOS DE NIVELES ---
+        let bgSky = skyColor;
+        let bgGround1 = '#8B4513';
+        let bgGround2 = '#32CD32';
+        let decorStyle = 0; // 0: Normal (montañas), 1: Nubes blancas, 2: Ruinas, 3: Cueva/Castillo
+        
+        // Determinar estilo en base al Nivel (1 al 4) y Mundo
+        if (nivelActual === 'Bonus') {
+            bgSky = '#FFB6C1';
+            bgGround1 = '#FF69B4';
+            bgGround2 = '#FF1493';
+            decorStyle = 1;
+        } else if (subRoom.active || isUnderworld || nivelActual === 3) {
+            bgSky = '#1C1C1C';
+            bgGround1 = '#4B0082';
+            bgGround2 = '#8B008B';
+            decorStyle = 3;
+        } else if (nivelActual === 5) {
+            bgSky = '#222222';
+            bgGround1 = '#444444';
+            bgGround2 = '#666666';
+            decorStyle = 2; // Ruina de Jefe
+        } else if (nivelActual === 1) {
+            // Nivel 1: Clásico del mundo actual (suelo verde, cielo del bioma)
+            decorStyle = (mundoActual === 1) ? 0 : 1; 
+        } else if (nivelActual === 2) {
+            // Nivel 2: Estilo "Atardecer" o "Amanecer"
+            bgSky = '#FF7F50'; // Coral (Atardecer)
+            bgGround1 = '#8B4513';
+            bgGround2 = '#DAA520'; // Suelo dorado
+            decorStyle = 1; // Nubes
+        } else if (nivelActual === 4) {
+            // Nivel 4: Estilo "Alto en el cielo" (Nubes)
+            bgSky = '#87CEFA'; // Azul claro
+            bgGround1 = '#E0FFFF'; // Suelo de nubes claras
+            bgGround2 = '#FFFFFF'; // Nube blanca
+            decorStyle = 1;
+        }
+
+        // 1. Dibujar Cielo
+        ctx.fillStyle = bgSky; 
+        ctx.fillRect(cameraX, 0, canvas.width, ground);
+        
+        // 2. Dibujar Decoraciones
+        if (decorStyle === 3) {
+            // Cueva / Castillo oscuro
+            ctx.fillStyle = '#363636';
+            for(let i = -500; i < levelLength + 1500; i += 200) {
+                ctx.fillRect(i, 100, 100, 50); ctx.fillRect(i+50, 200, 80, 40);
+            }
+            // Lava al fondo (adicional para cueva)
+            if (nivelActual === 3) {
+                 ctx.fillStyle = '#8B0000';
+                 for(let i = -500; i < levelLength + 1500; i += 150) {
+                     ctx.fillRect(i, ground - 30, 80, 30);
+                 }
+            }
+        } else if (decorStyle === 2) {
+            // Sala del Jefe / Ruinas
+            ctx.fillStyle = '#333333';
+            for(let y = 0; y < ground; y += 40) {
+                let offset = (y % 80 === 0) ? 0 : 40;
+                for(let x = -500; x < levelLength + 1500; x += 80) {
+                    ctx.fillRect(x + offset, y, 75, 35);
+                }
+            }
+            ctx.fillStyle = '#111111';
+            for(let i = -500; i < levelLength + 1500; i += 300) {
+                ctx.fillRect(i, 0, 80, ground);
+            }
+            ctx.fillStyle = '#FF4500'; // Antorchas
+            for(let i = -460; i < levelLength + 1500; i += 300) {
+                ctx.fillRect(i, 150, 10, 20);
+                ctx.fillStyle = '#FFD700'; ctx.fillRect(i+2, 155, 6, 10); ctx.fillStyle = '#FF4500';
+            }
+        } else if (decorStyle === 0) {
+            // Montañas clásicas
+            ctx.fillStyle = '#808080';
+            for(let i = -500; i < levelLength + 1500; i += 400) {
+                ctx.fillRect(i + 50, ground - 40, 120, 40); ctx.fillRect(i + 70, ground - 80, 80, 40); ctx.fillRect(i + 90, ground - 120, 40, 40);
+                ctx.fillStyle = '#696969'; ctx.fillRect(i + 50, ground - 40, 120, 5); ctx.fillRect(i + 70, ground - 80, 80, 5); ctx.fillRect(i + 90, ground - 120, 40, 5);
+                ctx.fillStyle = '#808080';
+            }
+        } else if (decorStyle === 1) {
+            // Nubes blancas animadas (estáticas para el scroll)
+            ctx.fillStyle = '#FFFFFF'; 
+            ctx.fillRect(cameraX * 0.5 + 100, 50, 60, 20); 
+            ctx.fillRect(cameraX * 0.5 + 110, 40, 40, 40); 
+            ctx.fillRect(cameraX * 0.5 + 400, 80, 80, 20);
+            for(let i = 0; i < levelLength; i+= 800) {
+                ctx.fillRect(i + cameraX * 0.5 + 800, 60, 60, 20);
+                ctx.fillRect(i + cameraX * 0.5 + 1200, 90, 80, 20);
+            }
+        }
+
+        // Arbustos decorativos (sólo en niveles 1 y 2 al aire libre)
+        if (decorStyle === 0 || decorStyle === 1) {
+            ctx.fillStyle = '#228B22'; // Verde bosque
+            for(let i = -500; i < levelLength + 1500; i += 350) {
+                ctx.fillRect(i + 50, ground - 50, 200, 50); ctx.fillRect(i + 100, ground - 100, 100, 50); ctx.fillRect(i + 125, ground - 150, 50, 50);
+            }
+        }
+
+        // 3. Dibujar Suelo principal
+        ctx.fillStyle = bgGround1; 
+        ctx.fillRect(cameraX, ground, canvas.width, canvas.height - ground);
+        ctx.fillStyle = bgGround2; 
+        ctx.fillRect(cameraX, ground, canvas.width, 15);
+        
+
+        if (!subRoom.active) {
+            if (nivelActual !== 5) {
+                ctx.fillStyle = isUnderworld ? '#1C1C1C' : skyColor; 
+                currentHuecos.forEach(h => { ctx.fillRect(h.x, ground, h.width, canvas.height - ground); });
+            }
+            currentCheckpoints.forEach(cp => { drawSprite(cp.active ? 'banderaVerde' : 'banderaRoja', cp.x, cp.y, cp.width); });
+            if (portal) { drawSprite('puerta', portal.x, portal.y, portal.width); ctx.fillStyle = "white"; ctx.font = "10px 'Courier New'"; ctx.fillText("META", portal.x + 15, portal.y - 10); }
+                        currentBloques.forEach(b => { if (b.active) drawSprite('bloque', b.x, b.y, b.width); });
+            currentPipes.forEach(p => drawPipe(p.x, p.y));
+            currentResortes.forEach(r => drawSprite('resorte', r.x, r.y, r.width));
+            
+            // Dibujar Plataformas
+            currentPlataformas.forEach(plat => {
+                if (plat.isTree) {
+                    ctx.fillStyle = '#8B4513'; ctx.fillRect(plat.x + plat.width/2 - 10, plat.y, 20, ground - plat.y); // Tronco
+                    ctx.fillStyle = '#228B22'; ctx.fillRect(plat.x, plat.y - 20, plat.width, 40); // Hojas
+                } else {
+                    ctx.fillStyle = '#D2691E'; ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+                    ctx.fillStyle = '#8B4513'; ctx.fillRect(plat.x, plat.y + 5, plat.width, 5);
+                }
+            });
+            // Dibujar Plantas (detrás de la tubería, así que antes de dibujarla)
+            // Bueno, dibujamos la tubería encima de la planta para que parezca que sale
+            currentPlantas.forEach(pl => {
+                if (pl.active && pl.y < pl.baseY + 20) drawSprite('planta', pl.x, pl.y, pl.width);
+            });
+            // Redibujar tuberías sobre las plantas
+            currentPipes.forEach(p => drawPipe(p.x, p.y));
+
+            currentMonos.forEach(m => { if (m.active) drawSprite('mono', m.x, m.y, m.width); });
+            currentHierbas.forEach(h => { if (h.active) drawSprite('hierba', h.x, h.y, h.width); });
+
+            currentPowerups.forEach(p => { if (!p.collected) drawSprite(p.type, p.x, p.y, p.width); });
+            currentTrasquiladores.forEach(t => {
+                if (!t.active) return;
+                let spr = t.tipo || 'trasquilador';
+                if (t.vx > 0) { ctx.save(); ctx.translate(t.x + t.width / 2, t.y + t.height / 2); ctx.scale(-1, 1); drawSprite(spr, -t.width / 2, -t.height / 2, t.width); ctx.restore(); } 
+                else { drawSprite(spr, t.x, t.y, t.width); }
+            });
+            
+            // Monos (Tiran cocos)
+            currentMonos.forEach(m => {
+                if (!m.active) return;
+                m.shootTimer++;
+                if (m.shootTimer > 150) {
+                    m.shootTimer = 0;
+                    // Encontrar jugador más cercano
+                    let target = players[0];
+                    if (players.length > 1 && Math.abs(players[1].x - m.x) < Math.abs(players[0].x - m.x)) target = players[1];
+                    
+                    if (Math.abs(target.x - m.x) < 600) { // Si está cerca
+                        let vx = (target.x < m.x) ? -4 : 4;
+                        bolas.push({ x: m.x, y: m.y + 10, vx: vx, vy: -2, width: 20, height: 20, hit: false, owner: 'mono', isCoco: true });
+                        playSound('shoot'); // Opcional sonido
+                    }
+                }
+                
+                players.forEach(p => {
+                    if (m.active && checkCollision(p, m)) {
+                        if (p.vy > 0 && p.y + p.height < m.y + m.height / 2) {
+                            m.active = false; p.vy = p.jumpPowerNormal; score += 10; scoreElement.innerText = score; playSound('enemyDie');
+                        } else if (p.invincibilityTimer > 0) {
+                            m.active = false; score += 10; scoreElement.innerText = score; playSound('enemyDie');
+                        } else if (p.flashHitTimer === 0) { recibirDanoEnemigo(p); p.vy = p.jumpPowerNormal; }
+                    }
+                });
+                bolas.forEach(b => {
+                    if (!b.hit && b.owner !== 'mono' && checkCollision(b, m)) { m.active = false; b.hit = true; score += 10; scoreElement.innerText = score; playSound('enemyDie'); }
+                });
+            });
+
+            // Plantas Piraña
+            currentPlantas.forEach(pl => {
+                if (!pl.active) return;
+                pl.timer += 0.05;
+                pl.y = pl.baseY + Math.sin(pl.timer) * 40; // Suben y bajan
+                
+                players.forEach(p => {
+                    if (pl.y < pl.baseY + 20 && checkCollision(p, pl)) { // Si está asomada
+                        if (p.invincibilityTimer > 0) {
+                            pl.active = false; score += 5; scoreElement.innerText = score; playSound('enemyDie');
+                        } else if (p.flashHitTimer === 0) { recibirDanoEnemigo(p); p.vy = p.jumpPowerNormal; }
+                    }
+                });
+                bolas.forEach(b => {
+                    if (!b.hit && pl.y < pl.baseY + 20 && checkCollision(b, pl)) { pl.active = false; b.hit = true; score += 5; scoreElement.innerText = score; playSound('enemyDie'); }
+                });
+            });
+
+            if (jefe && jefe.active) {
+                if (jefe.vx > 0) { ctx.save(); ctx.translate(jefe.x + jefe.width / 2, jefe.y + jefe.height / 2); ctx.scale(-1, 1); drawSprite('jefe', -jefe.width / 2, -jefe.height / 2, jefe.width); ctx.restore(); } 
+                else { drawSprite('jefe', jefe.x, jefe.y, jefe.width); }
+                ctx.fillStyle = "black"; ctx.fillRect(jefe.x - 5, jefe.y - 25, jefe.width + 10, 15);
+                ctx.fillStyle = "red"; ctx.fillRect(jefe.x, jefe.y - 20, (jefe.width / (mundoActual * (numPlayers===2?3:2) + 1)) * jefe.hp, 5);
+            }
+            currentCacaos.forEach(c => { if (!c.collected) drawSprite('cacao', c.x, c.y, 30); });
+        } else {
+            subRoom.pipes.forEach(p => drawPipe(p.x, p.y));
+            subRoom.cacaos.forEach(c => { if (!c.collected) drawSprite('cacao', c.x, c.y, 30); });
+        }
+
+        ctx.fillStyle = '#FFFFFF';
+        bolas.forEach(b => { if (b.isCoco) { drawSprite('coco', b.x, b.y, b.width); } else if (b.isCacao) { drawSprite('cacao', b.x, b.y, b.width); } else { ctx.beginPath(); ctx.arc(b.x + b.width/2, b.y + b.height/2, b.width/2, 0, Math.PI * 2); ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.strokeStyle = '#000000'; ctx.lineWidth = 2; ctx.stroke(); } });
+
+        players.forEach(p => {
+            let flashType = 0;
+            if (p.flashHitTimer > 0 && Math.floor(Date.now() / 100) % 2 === 0) flashType = 3; 
+            else if (p.invincibilityTimer > 0) flashType = 1; 
+            else if (p.superJumpTimer > 0) flashType = 2; 
+            else if (p.hasWoolPower) flashType = 4;
+
+            if (!p.facingRight) { ctx.save(); ctx.translate(p.x + p.width / 2, p.y + p.height / 2); ctx.scale(-1, 1); drawSprite(p.sprite, -p.width / 2, -p.height / 2, p.width, flashType); ctx.restore(); } 
+            else { drawSprite(p.sprite, p.x, p.y, p.width, flashType); }
+        });
+
+        if (isBonus) {
+            fallingCacaos.forEach(c => { drawSprite('cacao', c.x, c.y, 30); });
+            ctx.fillStyle = 'white';
+            ctx.font = "20px 'Press Start 2P'";
+            ctx.textAlign = "center";
+            if (bonusTimer > 0) {
+                ctx.fillText("TIEMPO: " + Math.ceil(bonusTimer / 60), cameraX + canvas.width/2, 50);
+            } else {
+                ctx.fillText("¡SAL POR LA PUERTA!", cameraX + canvas.width/2, 50);
+            }
+            ctx.textAlign = "left";
+        }
+        ctx.restore();
+    }
+
+    function gameLoop() {
+        if(gameStarted) { update(); draw(); }
+        requestAnimationFrame(gameLoop);
+    }
+    
+    requestAnimationFrame(gameLoop);
+
+</script>
+</body>
+</html>
