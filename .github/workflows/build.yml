@@ -47,7 +47,7 @@ jobs:
           CAPACITOR_DEBUG: "1"
         run: |
           rm -rf android
-          npx cap add android
+          npx cap add android --no-assets
           mkdir -p android/www
           cp -r www/* android/www/
           mkdir -p android/app/src/main/assets/public
